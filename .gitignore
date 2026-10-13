@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.ipynb_checkpoints/
+.DS_Store
+*.nemo
+*.wav
+*.flac
+*.mp3
+outputs/

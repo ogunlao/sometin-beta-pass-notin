@@ -1,0 +1,35 @@
+cff-version: 1.2.0
+message: "If you use SBPN models or these resources, please cite the paper below."
+title: "Sometin Beta Pass Notin (SBPN)"
+authors:
+  - family-names: Ogun
+    given-names: Sewade
+    affiliation: Masakhane NLP
+    orcid: "https://orcid.org/0009-0003-0648-021X"
+license: CC-BY-NC-SA-4.0
+repository-code: "https://github.com/ogunlao/sometin-beta-pass-notin"
+url: "https://huggingface.co/ogunlao/SBPN_multilingual_large"
+keywords:
+  - automatic speech recognition
+  - knowledge distillation
+  - pseudo-labelling
+  - Nigerian languages
+  - Yoruba
+  - Hausa
+  - Igbo
+  - Nigerian Pidgin
+  - Nigerian English
+preferred-citation:
+  type: article
+  title: "Sometin Beta Pass Notin: Improving Multilingual ASR for Nigerian Languages via Knowledge Distillation"
+  authors:
+    - family-names: Ogun
+      given-names: Sewade
+      affiliation: Masakhane NLP
+      orcid: "https://orcid.org/0009-0003-0648-021X"
+  journal: "arXiv preprint arXiv:2605.17710"
+  year: 2026
+  identifiers:
+    - type: other
+      value: "arXiv:2605.17710"
+  url: "https://arxiv.org/abs/2605.17710"

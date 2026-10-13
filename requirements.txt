@@ -1,0 +1,3 @@
+# Install PyTorch first (https://pytorch.org/get-started/locally/), then:
+nemo_toolkit[asr]
+librosa

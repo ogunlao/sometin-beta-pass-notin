@@ -24,10 +24,10 @@ This repository holds the paper's resources: the extra appendix, the Nigerian Pi
 
 ## Models
 
-| Model | Params | Architecture | Encoder initialisation | Link |
-|---|---|---|---|---|
-| SBPN-Base | 120M | FastConformer hybrid RNNT + CTC (17 layers, d=512) | [`nvidia/parakeet-tdt_ctc-110m`](https://huggingface.co/nvidia/parakeet-tdt_ctc-110m) | [🤗 ogunlao/SBPN_multilingual_base](https://huggingface.co/ogunlao/SBPN_multilingual_base) |
-| SBPN-Large | 600M | FastConformer hybrid RNNT + CTC (24 layers, d=1024) | [`nvidia/parakeet-tdt-0.6b-v3`](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3) | [🤗 ogunlao/SBPN_multilingual_large](https://huggingface.co/ogunlao/SBPN_multilingual_large) |
+| Model | Params | Link |
+|---|---|---|
+| SBPN-Base | 120M | [🤗 ogunlao/SBPN_multilingual_base](https://huggingface.co/ogunlao/SBPN_multilingual_base) |
+| SBPN-Large | 600M | [🤗 ogunlao/SBPN_multilingual_large](https://huggingface.co/ogunlao/SBPN_multilingual_large) |
 
 Both models take **16 kHz mono audio** and output a transcript prefixed with a language tag: `<|en|>`, `<|yo|>`, `<|ha|>`, `<|ig|>` or `<|pd|>` (Nigerian Pidgin).
 
@@ -128,32 +128,6 @@ flowchart LR
 2. **N-gram LMs.** One 5-gram KenLM per language, built from training labels, CC-100 and language-specific text corpora. Each LM is fused with an open-source monolingual CTC teacher ([Hausa](https://hf.co/CLEAR-Global/w2v-bert-2.0-hausa_579_993h_yourtts), [Igbo](https://hf.co/CLEAR-Global/w2v-bert-2.0-igbo_naijavoices_500h), [Yorùbá](https://hf.co/CLEAR-Global/w2v-bert-2.0-yoruba_naijavoices_500h), [Pidgin](https://hf.co/asr-nigerian-pidgin/pidgin-wav2vec2-xlsr53)) through the Flashlight decoder to produce pseudo-labels.
 3. **Knowledge distillation (Stage 1).** SBPN-Large is trained on pseudo-labelled and ground-truth data together, then refined on ground-truth data alone.
 4. **Self-improvement (Stage 2, two iterations).** The student re-labels the unlabelled audio using LM fusion. Each language gets its own confidence threshold, and any pseudo-label whose language tag disagrees with the target language is discarded.
-5. **SBPN-Base** is distilled from SBPN-Large's pseudo-labels, using target-language forcing among the beam hypotheses.
-6. **Nigerian Pidgin orthographic normalisation.** Pidgin has no standard orthography. Variants were clustered by aligning English-ASR and Pidgin-ASR outputs with the reference transcripts, then mapped to the most frequent form ([Appendix A](paper/SBPN_appendix.pdf)). Context-dependent homophones were resolved with the Pidgin N-gram LM ([Appendix B](paper/SBPN_appendix.pdf)). Test sets were left unnormalised.
-
-<details>
-<summary><b>Training hyperparameters (Table III)</b></summary>
-
-| Parameter | SBPN-Base | SBPN-Large |
-|---|---|---|
-| Encoder layers / hidden dim | 17 / 512 | 24 / 1,024 |
-| LSTMs in prediction network | 1 | 2 |
-| Attention heads | 8 | 8 |
-| Vocabulary (SentencePiece) | 4,096 | 4,096 |
-| Log-Mel bins | 80 | 120 |
-| RNNT loss | Graph RNNT | Graph RNNT |
-| Base / self-improvement LR | 1e-4 / 1e-5 | 3e-4 / 1e-5 |
-| Weight decay | 1e-4 | 1e-4 |
-| CTC loss weight | 0.3 | 0.3 |
-| Global batch size | 320 | 240 |
-| Language sampling temperature | 20 | 20 |
-| Beam size | 100 | 100 |
-| Checkpoint averaging | Last 3 | None |
-| Precision | BF16-mixed | BF16-mixed |
-
-Augmentation (distillation → self-improvement): SpecAugment; MUSAN noise p = 0.4 → 0.25 (SNR 5–30 dB); time stretching {0.9, 1.0, 1.1, 1.2} p = 0.4 → 0.25. Optimiser: AdamW, 2,500 warm-up steps, cosine annealing.
-
-</details>
 
 ## Training data
 
@@ -201,25 +175,6 @@ The en-ng teacher is Parakeet-TDT-0.6B-v3.
 | SBPN-Base | 120M | 19.22 | 33.52 | 23.86 | 25.53 |
 | **SBPN-Large** | 600M | **17.69** | **31.46** | **23.32** | **24.16** |
 
-Baseline numbers are as reported in their original publications.
-
-### Language identification: micro-F1
-
-| Language | ECAPA-TDNN (audio) | AfroLID (text) | SBPN-Base | SBPN-Large |
-|---|---:|---:|---:|---:|
-| en-ng | 20.23 | – | 100.00 | 100.00 |
-| yo | 96.03 | 100.00 | 100.00 | 100.00 |
-| ha | 97.42 | 99.84 | 99.68 | 100.00 |
-| pcm | – | 44.39 | 97.31 | 96.52 |
-| ig | – | 100.00 | 99.69 | 100.00 |
-
-### 5-gram LM perplexity (KenLM)
-
-| yo | ha | pcm | ig |
-|---:|---:|---:|---:|
-| 775.60 | 243.24 | 15.48 | 472.98 |
-
-The paper also covers robustness to speaking rate (WSOLA time-stretching from 0.75× to 2×) and diacritic prediction for Yorùbá and Igbo. See Sections IV-C and IV-D.
 
 ## Nigerian Pidgin normalisation resources
 
@@ -246,25 +201,6 @@ normalize("throw way the thing")  # "troway di tin"
 
 The script performs whole-word, case-insensitive replacement, longest phrase first. It does not resolve Appendix B homophones; the paper did that by scoring each candidate with the Pidgin N-gram LM.
 
-## Repository structure
-
-```
-.
-├── sbpn.py                           # simple interface: .wav in -> transcript + language out
-├── paper/
-│   ├── README.md                     # links to the arXiv paper
-│   └── SBPN_appendix.pdf             # extra appendix (A: Pidgin orthography map, B: homophones)
-├── data/
-│   ├── pidgin_orthography_map.tsv    # Appendix A, machine-readable
-│   └── pidgin_homophones.tsv         # Appendix B, machine-readable
-├── scripts/
-│   ├── transcribe.py                 # batch transcription of files/directories to TSV/JSONL
-│   └── normalize_pidgin.py           # Nigerian Pidgin orthographic normalisation
-├── requirements.txt
-├── CITATION.cff
-└── LICENSE
-```
-
 ## Limitations
 
 - The models are intended for the five languages they were trained on. Do not rely on them for other languages in real-world use.
@@ -289,4 +225,4 @@ SBPN models were trained on datasets released under a range of licenses, so they
 
 ## Acknowledgements
 
-Thanks to Amina Mardiyyah Rufai for proofreading the manuscript. SBPN builds on [NVIDIA NeMo](https://github.com/NVIDIA/NeMo), the Parakeet checkpoints, and the open-source Nigerian-language datasets and models listed above. Without them, there would be *notin*.
+SBPN builds on [NVIDIA NeMo](https://github.com/NVIDIA/NeMo), the Parakeet checkpoints, and the open-source Nigerian-language datasets and models listed above. Without them, there would be *notin*.

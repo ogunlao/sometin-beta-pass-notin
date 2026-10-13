@@ -35,13 +35,50 @@ Both models take **16 kHz mono audio** and output a transcript prefixed with a l
 
 ### Install
 
-Install [PyTorch](https://pytorch.org/get-started/locally/) first, then [NVIDIA NeMo](https://github.com/NVIDIA/NeMo):
+Install [PyTorch](https://pytorch.org/get-started/locally/) first, then the requirements ([NVIDIA NeMo](https://github.com/NVIDIA/NeMo) and librosa):
 
 ```bash
-pip install "nemo_toolkit[asr]"   # or nemo_toolkit['all']
+git clone https://github.com/ogunlao/sometin-beta-pass-notin.git
+cd sometin-beta-pass-notin
+pip install -r requirements.txt
 ```
 
-### Load a model and transcribe
+### Transcribe a .wav file: transcript + language
+
+The command line:
+
+```console
+$ python sbpn.py sample.wav
+Language:   Nigerian Pidgin (pcm)
+Transcript: how body dey
+```
+
+Or from Python, with [`sbpn.py`](sbpn.py):
+
+```python
+from sbpn import SBPN
+
+model = SBPN()                       # SBPN-Large (600M). SBPN("base") for the 120M model
+result = model.transcribe("sample.wav")
+
+result.text           # "how body dey"
+result.language       # "pcm"  -> one of: en, yo, ha, ig, pcm
+result.language_name  # "Nigerian Pidgin"
+```
+
+Pass a list of files to get a list of results: `model.transcribe(["a.wav", "b.wav"])`. Audio at any sample rate, mono or stereo, is resampled to the 16 kHz mono input the model expects.
+
+### Using NeMo directly
+
+> **Note:** the checkpoints were trained with Graph RNNT loss, so a plain `from_pretrained` fails with `Could not import k2` unless [k2](https://k2-fsa.github.io/k2/installation/index.html) is installed. `sbpn.py` avoids this by switching to NeMo's default RNNT loss at load time; the loss is never used at inference. To do the same yourself:
+>
+> ```python
+> from omegaconf import open_dict
+> cfg = nemo_asr.models.EncDecHybridRNNTCTCBPEModel.from_pretrained("ogunlao/SBPN_multilingual_large", return_config=True)
+> with open_dict(cfg):
+>     cfg.loss = {"loss_name": "default"}
+> asr_model = nemo_asr.models.EncDecHybridRNNTCTCBPEModel.from_pretrained("ogunlao/SBPN_multilingual_large", override_config_path=cfg)
+> ```
 
 ```python
 import re
@@ -61,14 +98,11 @@ language_id = prediction.split()[0]
 transcript = re.sub(r"<.*?>", "", prediction).strip()
 ```
 
-### Command-line script
+### Batch transcription
 
-[`scripts/transcribe.py`](scripts/transcribe.py) resamples any audio to 16 kHz mono, transcribes it in batches and splits off the language tag:
+For many files or whole directories, use [`scripts/transcribe.py`](scripts/transcribe.py):
 
 ```bash
-pip install -r requirements.txt
-
-python scripts/transcribe.py sample.wav                          # SBPN-Large by default
 python scripts/transcribe.py clips/ --model base --batch-size 8  # a whole directory with SBPN-Base
 python scripts/transcribe.py clips/ --output results.jsonl       # {"audio", "language", "text"} per line
 ```
@@ -216,6 +250,7 @@ The script performs whole-word, case-insensitive replacement, longest phrase fir
 
 ```
 .
+├── sbpn.py                           # simple interface: .wav in -> transcript + language out
 ├── paper/
 │   ├── README.md                     # links to the arXiv paper
 │   └── SBPN_appendix.pdf             # extra appendix (A: Pidgin orthography map, B: homophones)
@@ -223,7 +258,7 @@ The script performs whole-word, case-insensitive replacement, longest phrase fir
 │   ├── pidgin_orthography_map.tsv    # Appendix A, machine-readable
 │   └── pidgin_homophones.tsv         # Appendix B, machine-readable
 ├── scripts/
-│   ├── transcribe.py                 # batch transcription + language ID with SBPN
+│   ├── transcribe.py                 # batch transcription of files/directories to TSV/JSONL
 │   └── normalize_pidgin.py           # Nigerian Pidgin orthographic normalisation
 ├── requirements.txt
 ├── CITATION.cff
